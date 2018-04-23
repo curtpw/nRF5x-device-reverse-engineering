@@ -1,15 +1,15 @@
-nRF52/nRF51 Activity Trackers for Wearable Device Development
+nRF52/nRF51 Smartwatches and Activity Trackers for Wearable Device Development
 =============================
 
-Resources for reverse engineering generic [Nordic Semiconductor](https://www.nordicsemi.com) nRF52832 and nRF51822 ARM Cortex based activity trackers. These devices have become my primary development platform for rapid prototyping of wearables. You get a nRF52832 ARM Cortex M4 SoC MCU, color OLED display, accelerometer, HR LED, HR photodetector, vibration motor, LiPo battery, battery charger, injection molded enclosure and strap for $30-$40. Using these devices as a development platform means faster, more ambitious prototyping - I treat them as disposable and have personally destroyed more than 20 over the past two years. These devices can be programmed using [nRF5X ArduinoCore](https://github.com/sandeepmistry/arduino-nRF5), [ARM Mbed](https://www.mbed.com) or directly with the [Nordic nRF5X SDK](http://developer.nordicsemi.com/nRF5_SDK/doc/) using ARM [Keil](http://www.keil.com/) or the [GNU ARM Embedded](https://launchpad.net/gcc-arm-embedded) GCC toolchain. Devices can be flashed using [nRFgo Studio](https://www.nordicsemi.com/eng/Products/2.4GHz-RF/nRFgo-Studio), [nRFjprog Win](https://www.nordicsemi.com/eng/nordic/Products/nRF52-DK/nRF5x-Command-Line-Tools-Win32/51499) , [nRFjprog Linux](https://www.nordicsemi.com/eng/nordic/Products/nRF51822/nRF5x-Command-Line-Tools-Linux64/51386) , [nRFjprog Mac](https://www.nordicsemi.com/eng/nordic/Products/nRF51822/nRF5x-Command-Line-Tools-OSX/53402) , [OpenOCD](http://openocd.org/) and [ArduinoCore](https://github.com/sandeepmistry/arduino-nRF5) Arduino IDE Plugin.
+Resources for reverse engineering generic [Nordic Semiconductor](https://www.nordicsemi.com) nRF52832 and nRF51822 ARM Cortex based Smartwatches and activity trackers. These devices are my primary development platform for rapid prototyping of wearables. You get a nRF52832 ARM Cortex M4 SoC MCU, color OLED display, accelerometer, HR LED, HR photodetector, vibration motor, LiPo battery, battery charger, injection molded enclosure and strap for $30-$40. Using these devices as a development platform means faster, more ambitious prototyping - I treat them as disposable and have personally destroyed more than 20 over the past two years. These devices can be programmed using [nRF5X ArduinoCore](https://github.com/sandeepmistry/arduino-nRF5), [ARM Mbed](https://www.mbed.com) or directly with the [Nordic nRF5X SDK](http://developer.nordicsemi.com/nRF5_SDK/doc/) using ARM [Keil](http://www.keil.com/) or the [GNU ARM Embedded](https://launchpad.net/gcc-arm-embedded) GCC toolchain. Devices can be flashed using [nRFgo Studio](https://www.nordicsemi.com/eng/Products/2.4GHz-RF/nRFgo-Studio), [nRFjprog Win](https://www.nordicsemi.com/eng/nordic/Products/nRF52-DK/nRF5x-Command-Line-Tools-Win32/51499) , [nRFjprog Linux](https://www.nordicsemi.com/eng/nordic/Products/nRF51822/nRF5x-Command-Line-Tools-Linux64/51386) , [nRFjprog Mac](https://www.nordicsemi.com/eng/nordic/Products/nRF51822/nRF5x-Command-Line-Tools-OSX/53402) , [OpenOCD](http://openocd.org/) and [ArduinoCore](https://github.com/sandeepmistry/arduino-nRF5) Arduino IDE Plugin.
 
 NOTE: I will try to keep purchase links updated but one can only do so much. DuckDuckGo/Google search is your friend. I have worked with the X9 more than any other device and have placed X9 related files in the root of this repo. I am still in the process of hacking components for other listed devices, and you are of course welcome to contribute!
 
 
-X9 Pro nRF52832 Based Color Activity Tracker 
+X9 Pro nRF52832 Based Color Smartwatch 
 ------------
 
-![X9_activity_tracker](misc/X9_commercial.jpg "X9 activity tracker commercial image")
+![X9_activity_tracker](misc/X9_commercial.jpg "X9 Smartwatch commercial image")
 
 ### Purchase Links
 https://www.ebay.com/itm/X9Pro-Bluetooth-Smart-Watch-Heart-Rate-Monitor-Bracelet-Fitness-Activity-Tracker/372268058270
@@ -20,10 +20,10 @@ https://www.amazon.com/Gentman-Colorful-Wristwatch-Pressure-Smartwatch/dp/B074J2
 https://de.aliexpress.com/item/New-Original-X9-PRO-Smart-Watch-Sport-Heartrate-Blood-Pressure-Oxygen-Oximeter-Sport-Bracelet-Watch-intelligent/32823945075.html
 
 
-N68 nRF52832 Based Color Activity Tracker
+N68 nRF52832 Based Color Smartwatch 
 ------------
 
-![N68_activity_tracker](misc/N68_commercial.jpg "N68 activity tracker commercial image")
+![N68_activity_tracker](misc/N68_commercial.jpg "N68 Smartwatch commercial image")
 
 ### Purchase Links
 https://www.aliexpress.com/item/N68-Smart-Bracelet-Blood-Pressure-Dynamic-Heart-Rate-Activity-Fitness-Tracker-Smart-Wristband-Pedometer-Waterproof-Smart/32861208616.html
@@ -33,10 +33,10 @@ https://www.ebay.com/itm/Lemfo-N68-Bluetooth-Waterproof-Activity-Tracker-Heart-R
 https://www.amazon.com/Bracelet-Activity-Waterproof-Bluetooth-Wireless/dp/B078W28FYH/ref=sr_1_1
 
 
-CK12 nRF52832 Based ECG Activity Tracker
+CK12 nRF52832 Based ECG Smartwatch 
 ------------
 
-![CK12_activity_tracker](misc/CK12_commercial.jpg "CK12 activity tracker commercial image")
+![CK12_activity_tracker](misc/CK12_commercial.jpg "CK12 Smartwatch commercial image")
 
 ### Purchase Links
 https://www.aliexpress.com/item/Hot-Smart-Watch-CK12-Graphene-ECG-Blood-Pressure-Heart-Rate-Smart-Bracelet-Sport-Watch-Pedometer-Call/32830280936.html
@@ -46,10 +46,10 @@ https://www.aliexpress.com/item/Teamyo-CK12-Graphene-ECG-Smart-Band-Oxygen-Press
 
 
 
-ID107 Plus nRF52832 Based Activity Tracker
+ID107 Plus nRF52832 Based Smartwatch 
 ------------
 
-![ID107Plus_activity_tracker](misc/ID107Plus_commercial.jpg "ID107 Plus activity tracker commercial image")
+![ID107Plus_activity_tracker](misc/ID107Plus_commercial.jpg "ID107 Plus Smartwatch commercial image")
 
 ### Purchase Links
 https://www.aliexpress.com/item/YurKem-ID107-Plus-HR-Smart-Band-Bluetooth-4-0-Answer-Call-GPS-Smart-Bracelet-Heart-Rate/32811734484.html
@@ -58,10 +58,10 @@ https://www.ebay.com/itm/ID107-Plus-IP67-SmartWatch-Sleep-Activity-Tracker-Fitne
 https://www.ebay.com/itm/Fitness-Tracker-JELEGANT-ID107-Plus-HR-Smart-Bracelet-Activity-Tracker-Hear/292493668861
 
 
-M3 nRF51822 Based Mini Activity Tracker
+M3 nRF51822 Based Mini Smartwatch 
 ------------
 
-![M3_activity_tracker](misc/M3_commercial.png "M3 activity tracker commercial image")
+![M3_activity_tracker](misc/M3_commercial.png "M3 Smartwatch commercial image")
 
 ### Purchase Links
 https://www.aliexpress.com/item/HL-2017-M3-Sports-Smart-Watch-Heart-Rate-Calories-Wrist-Watch-Smart-Bracelet-Watch-ma29-Levert/32804495965.html
@@ -70,10 +70,10 @@ http://techshopstore.com/products/m3-ip67-life-waterproof-sport-smart-wristbands
 https://www.amazon.com/Aurorax-Fitness-Waterproof-Tracker-Monitor/dp/B0765RG26M/ref=sr_1_5
 
 
-ID107 nRF51822 Based Activity Tracker
+ID107 nRF51822 Based Smartwatch 
 ------------
 
-![ID107_activity_tracker](misc/ID107_commercial.jpg "ID107 activity tracker commercial image")
+![ID107_activity_tracker](misc/ID107_commercial.jpg "ID107 Smartwatch commercial image")
 
 ### Purchase Links
 https://www.aliexpress.com/item/ID107-Smart-Band-Smartband-Heart-Rate-Monitor-Wristband-Fitness-Flex-Bracelet-for-Android-iOS-PK-xiomi/32812006895.html
