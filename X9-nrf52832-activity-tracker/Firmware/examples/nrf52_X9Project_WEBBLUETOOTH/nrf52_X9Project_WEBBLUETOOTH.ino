@@ -1,15 +1,11 @@
-
 /********************************************************************************************************/
-/************************ INCLUDE ***********************************************************************/
+/************************ INCLUDES **********************************************************************/
 /********************************************************************************************************/
 #define NRF52
 
-#include <stdio.h>
-#include <stdint.h>
 #include <SPI.h>
 #include <BLEPeripheral.h>    //bluetooth
 #include <BLEUtil.h>
-#include "BLESerial.h"
 #include "KX126_SPI.h"        //accelerometer
 
 /********************************************************************************************************/
@@ -51,20 +47,16 @@ float   speedMs = speedHigh;
 #define PIN_SPI_MISO         (KX126_SDO)
 #define PIN_SPI_MOSI         (KX126_SDI)
 #define PIN_SPI_SCK          (KX126_SCL)
+#define CS_PIN                (KX126_CS)
 
-//BLESerial
-#define BLE_REQ   10
-#define BLE_RDY   2
-#define BLE_RST   9
-
-// Serial dummy NC GPIO
+// Serial dummy NC GPIO - turning on hardware UART Serial fixes some BLE Serial bugs
 #define PIN_SERIAL_RX       25 
 #define PIN_SERIAL_TX       26
 
 /********************************************************************************************************/
 /************************ VARIABLES *********************************************************************/
 /********************************************************************************************************/
-
+bool debug = true;
   //Button - raw capacitive touch button value
     int buttonValue;     
 
@@ -78,8 +70,7 @@ float   speedMs = speedHigh;
     float  clocktime = 0;
 
   //Bluetooth
-    unsigned long millisPerTransmit; 
-    unsigned long millisPrevious = 0;
+    int     received_command = 99; //from browser or app
  
   //KX126 Accelerometer
     const int dataReadyPin = 6;
@@ -91,14 +82,23 @@ float   speedMs = speedHigh;
 /********************************************************************************************************/
 /************************ DECLARATIONS ******************************************************************/
 /********************************************************************************************************/
-//KX126 Accelerometer
+
+//Accelerometer
 KX126_SPI kx126(KX126_CS);
 
-//Bluetooth - create peripheral instance, see pinout definitions above
-BLESerial bleSerial(BLE_REQ, BLE_RDY, BLE_RST);
+//Bluetooth
+// create peripheral instance, see pinouts above
+BLEPeripheral blePeripheral = BLEPeripheral();
 
-//Permanent storage on nRF52832 FLASH
-BLEBondStore bleBondStore;
+// create service
+BLEService customService =    BLEService("a000");
+
+// create command i/o characteristics
+BLECharCharacteristic    ReadOnlyArrayGattCharacteristic  = BLECharCharacteristic("a001", BLERead);
+BLECharCharacteristic    WriteOnlyArrayGattCharacteristic = BLECharCharacteristic("a002", BLEWrite);
+
+//create streaming data characteristic
+BLECharacteristic        DataCharacteristic("a003", BLERead | BLENotify, 20);  //@param data - an Uint8Array.
 
 
 /********************************************************************************************************/
@@ -107,35 +107,22 @@ BLEBondStore bleBondStore;
 
 void setup() 
 {
-    // custom services and characteristics can be added as well
-    bleSerial.setLocalName("X9nRF52832");
-
-    //Bluetooth UART
-    bleSerial.begin();
-    
-    // acceptable values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
-    int power = -4;
-    sd_ble_gap_tx_power_set(power);
-
-    //SET BLE SERIAL TRANSMIT FREQUENCY
-    unsigned long millisPerTransmit = 1000; // 1HZ
-    
+    Serial.begin(115200);
     delay(50);
-
-    //Hardware UART - BLESerial is more stable with HW UART enabled but it does consume power
-    Serial.begin(115200); 
-  //  Serial.println("SETUP");
 
   /************ INIT KX126 ACCELEROMETER *****************************/
     kx126.init();
     delay(100);
 
   /************ I/O BUTTON, LED, HAPTIC FEEDBACK *********************/
-    //Set HR LED pin high/off 
+    //Set HR LED pin 
     pinMode(HR_LED_PIN, OUTPUT);  digitalWrite(HR_LED_PIN, 1);
 
    //configure haptic feedback pin
     pinMode(VIBRATE_PIN, OUTPUT);  digitalWrite(VIBRATE_PIN, 0);
+
+    /************ CONFIGURE & START BLUETOOTH *********************/
+    setupBluetooth();
 
   delay(500);  
 }
@@ -146,16 +133,13 @@ void setup()
 
 void loop()
 {     
-  //BLUETOOTH SERIAL
-  bleSerial.poll();
-  delay(50);
-
-  /*************** LOOP SPEED CONTROL **********************************/
+ 
+ /*************** LOOP SPEED CONTROL **********************************/
 if(clocktime + speedMs < millis()){
 
   /*************** TIMESTAMP *******************************************/
    clocktime = millis();
-  // Serial.println(clocktime);
+
 
   /*************** HEART RATE *****************************************/
    HRRawVal = analogRead(HR_DETECTOR);
@@ -171,32 +155,28 @@ if(clocktime + speedMs < millis()){
   buttonValue = analogRead(TOUCH_BUTTON); //no touch 100-400 , touch 500-1023
 
   /*************** TEST BUTTON, HR LED AND VIBRATION MOTOR *************/
-  //touching button turns on green HR LED and vibration motor for one second
-  if(buttonValue < 350){
-    digitalWrite(VIBRATE_PIN, 1);
+  //touching button turns on green HR LED for one second - comment out if touch is used over Web Bluetooth
+ /* if(buttonValue < 350){
     digitalWrite(HR_LED_PIN, 1);
     delay(1000);
-    digitalWrite(VIBRATE_PIN, 0);
     digitalWrite(HR_LED_PIN, 0);
     delay(1000);
-  }
+  } */
 
    /************** READ KX126 ACCELEROMETER *****************************/
    sampleAngularPosition();
 
    /************** TRANSMIT SENSOR DATA OVER BLUETOOTH ******************/ 
-    unsigned long millisNow;
-    millisNow = millis(); 
-    //check to see if enough time has elapsed
-    if(millisNow - millisPrevious >= millisPerTransmit){
-      // increment previous time, so we keep proper pace
-      millisPrevious = millisPrevious + millisPerTransmit;
-      
-      transmitSensorData();
-    }
- } //end timed loop
+   transmitSensorData();
 
-} //end infinate loop
+
+//end timed loop
+ }
+
+//end infinate loop
+} 
+
+
 
 /********************************************************************************************************/
 /************************ FUNCTIONS *********************************************************************/
@@ -206,10 +186,10 @@ if(clocktime + speedMs < millis()){
 *************** READ KX126 ACCELEROMETER *****************************
 *********************************************************************/
 void sampleAngularPosition(){
-    //KX126 ACCELEROMETER I2C
-    acc[0] = (float)(kx126.getAccel(0) );
-    acc[1] = (float)(kx126.getAccel(1) );
-    acc[2] = (float)(kx126.getAccel(2) );
+    //KX022 ACCELEROMETER I2C
+    acc[0] = (float)(kx126.getAccel(0));
+    acc[1] = (float)(kx126.getAccel(1));
+    acc[2] = (float)(kx126.getAccel(2));
     float eulerX, eulerY, eulerZ;
     
     eulerX = acc[0]; eulerY = acc[1]; eulerZ = acc[2]; 
@@ -229,74 +209,149 @@ void sampleAngularPosition(){
 *************** TRANSMIT SENSOR DATA OVER BLUETOOTH ****************** 
 *********************************************************************/
 void transmitSensorData(){
-    if (bleSerial) {
-      //use itoa to convert float->char and sprintf to convert int->char
-
-      char buffPitch[8], buffPitch2[4];
-      itoa(pitch, buffPitch, 10);
-      strcat(buffPitch, ".");                   //append decimal point
-      uint16_t i = (pitch - (int)pitch) * 100;  //subtract to get the decimals, and multiply by 100
-      itoa(i, buffPitch2, 10);                  //convert to a second string
-      strcat(buffPitch, buffPitch2);            //and append to the first
-
-      char buffRoll[8], buffRoll2[4];
-      itoa(roll, buffRoll, 10);
-      strcat(buffRoll, ".");                    //append decimal point
-      uint16_t j = (roll - (int)roll) * 100;    //subtract to get the decimals, and multiply by 100
-      itoa(j, buffRoll2, 10);                   //convert to a second string
-      strcat(buffRoll, buffRoll2);              //and append to the first
-    //   bleSerial.println(buffRoll);
-
-       char buffButton[16] = "";
-       snprintf(buffButton, sizeof(buffButton), "%s %d", "bt:", buttonValue);
-    //   bleSerial.println(buffButton);
-
-       char buffHeart[16] = "";
-       snprintf(buffHeart, sizeof(buffHeart), "%s %d", "hr:", HRRawVal);
-     //  bleSerial.println(buffHeart);
-
-       char buffBattery[16] = "";
-       snprintf(buffBattery, sizeof(buffBattery), "%s %d", "ba:", batteryValue);
-     //  bleSerial.println(buffBattery);
-
-       char buffCombined[88];
-       strcpy(buffCombined, buffPitch);
-       strcat(buffCombined, " ");
-       strcat(buffCombined, buffRoll);
-       strcat(buffCombined, " ");
-       strcat(buffCombined, buffButton);
-       strcat(buffCombined, " ");
-       strcat(buffCombined, buffHeart);
-       strcat(buffCombined, " ");
-       strcat(buffCombined, buffBattery);
-
-       //send the combined char array
-       bleSerial.println(buffCombined);
-    }
+    BLECentral central = blePeripheral.central();
+    
+    if(central){ // if a central is connected to peripheral
+              const unsigned char imuCharArray[20] = {
+                  (uint8_t)( (acc[0] + 1.00) * 100.00),
+                  (uint8_t)( (acc[1] + 1.00) * 100.00),
+                  (uint8_t)( (acc[2] + 1.00) * 100.00),  
+                  (uint8_t)(roll / 1.41),              //360 --> 256   
+                  (uint8_t)(pitch / 1.41),             //360 --> 256
+                  (uint8_t)(HRRawVal / 4),      //1023 --> 256
+                  (uint8_t)(buttonValue / 4),   //1023 --> 256
+                  (uint8_t)(batteryValue),
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,             
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,
+                  (uint8_t)0,  
+                  (uint8_t)0                   //empty
+              }; 
+              //send data over bluetooth
+              DataCharacteristic.setValue(imuCharArray,20);
+              delay(5);
+          }
 }
 
-/*********************************************************************
-*************** ETC **************************************************
-*********************************************************************/
 
-// echo all received data back
-void loopback() {
-  if (bleSerial) {
-    int byte;
-    while ((byte = bleSerial.read()) > 0) bleSerial.write(byte);
+
+/********************************************************************************************************/
+/************************ BLUETOOTH BLE FUNCTIONS *************************************************/
+/********************************************************************************************************/
+void blePeripheralConnectHandler(BLECentral& central) {
+  // central connected event handler
+
+  //do something when connection starts
+  delay(5);
+}
+
+void blePeripheralDisconnectHandler(BLECentral& central) {
+
+    //do something on disconnect
+
+  delay(5);
+}
+
+void blePeripheralServicesDiscoveredHandler(BLECentral& central) {
+  // central  services discovered event handler
+
+  delay(5);
+}
+
+void bleCharacteristicValueUpdatedHandle(BLECentral& central, BLECharacteristic& characteristic) {
+  
+    
+  const unsigned char* the_buffer = characteristic.value();
+  unsigned char the_length = characteristic.valueLength();
+  
+  String bleRawVal = "";
+  for (byte i = 0; i < the_length; i++){ 
+    bleRawVal += String(the_buffer[i], HEX); 
   }
+
+  char *char_buf = const_cast<char*>(bleRawVal.c_str());
+  
+  received_command = (int)strtol(char_buf, NULL, 16);
+
+  BLEUtil::printBuffer(characteristic.value(), characteristic.valueLength());
+  delay(5);
 }
 
-// periodically sent time stamps
-void spam() {
-  if (bleSerial) {
-    bleSerial.print(millis());
-    bleSerial.println(" Salamander!");
+
+void setupBluetooth(){
+  /************ INIT BLUETOOTH BLE instantiate BLE peripheral *********/
+   // set advertised local name and service UUID
+    blePeripheral.setLocalName("Tingle");
+    blePeripheral.setDeviceName("Tingle");
+    blePeripheral.setAdvertisedServiceUuid(customService.uuid());
+    blePeripheral.setAppearance(0xFFFF);
+  
+    // add attributes (services, characteristics, descriptors) to peripheral
+    blePeripheral.addAttribute(customService);
+    
+    blePeripheral.addAttribute(ReadOnlyArrayGattCharacteristic);
+    blePeripheral.addAttribute(WriteOnlyArrayGattCharacteristic);
+    
+    blePeripheral.addAttribute(DataCharacteristic); //streaming data for app graph
+    
+    // assign event handlers for connected, disconnected to peripheral
+    blePeripheral.setEventHandler(BLEConnected, blePeripheralConnectHandler);
+    blePeripheral.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
+
+    // assign event handlers for characteristic
+    ReadOnlyArrayGattCharacteristic.setEventHandler(BLEWritten /*BLEValueUpdated*/, bleCharacteristicValueUpdatedHandle);
+    WriteOnlyArrayGattCharacteristic.setEventHandler(BLEWritten /*BLEValueUpdated*/, bleCharacteristicValueUpdatedHandle);
+
+    // assign initial values
+    char readValue[10] = {0,0,0,0,0,0,0,0,0,0};
+    ReadOnlyArrayGattCharacteristic.setValue(0);
+    char writeValue[10] = {0,0,0,0,0,0,0,0,0,0};
+    WriteOnlyArrayGattCharacteristic.setValue(0);
+  
+    // begin initialization
+    blePeripheral.begin();
+  
+}
+
+/********************************************************************************************************/
+/************************ UTILITY FUNCTIONS *************************************************/
+/********************************************************************************************************/
+float differenceBetweenAngles(float firstAngle, float secondAngle)
+  {
+        double difference = secondAngle - firstAngle;
+        while (difference < -180) difference += 360;
+        while (difference > 180) difference -= 360;
+        return difference;
+ }
+ 
+int hex_to_int(char c){
+  int first;
+  int second;
+  int value;
+  
+  if (c >= 97) {
+    c -= 32;
   }
+  first = c / 16 - 3;
+  second = c % 16;
+  value = first * 10 + second;
+  if (value > 9) {
+    value--;
+  }
+  return value;
 }
 
-
-
-
+int hex_to_ascii(char c, char d){
+  int high = hex_to_int(c) * 16;
+  int low = hex_to_int(d);
+  return high+low;
+}
 
 
