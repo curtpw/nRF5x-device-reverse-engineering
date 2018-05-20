@@ -82,6 +82,14 @@ https://www.ebay.com/itm/ID107-Heart-Rate-Smart-Watch-Bracelet-Fitness-Activity-
 https://www.ebay.com/itm/ID107-Bluetooth-Smart-Watch-Fitness-Activity-Tracker-Pedometer-Calories-Counter/132232187828
 https://www.amazon.com/Bluetooth-Bracelet-Monitor-Wristband-Smartphone/dp/B01DF2H732/ref=sr_1_1
 
+I5 Plus nRF51822 Based Activity Tracker 
+------------
+![I5Plus_activity_tracker](/misc/I5Plus_commerical.jpg "I5Plus Activity Tracker commercial image")
+### Purchase Links (around 15$)
+https://de.aliexpress.com/item/Smart-Armband-iwown-i5-Plus-Fitness-Tracker-Armband-Bluetooth-4-0-Aktivit-t-Tracker-Smart-Band/32849774968.html?spm=a2g0x.search0104.3.1.17087a35gmSOzc&ws_ab_test=searchweb0_0%2Csearchweb201602_2_10320_10152_10151_10065_10321_10344_10068_10342_10547_10343_10322_10340_10548_10341_10193_10696_10194_10084_10083_10618_10304_10307_10302_10059_308_100031_10319_10103_10624_10623_10622_10621_10620_10814_10815%2Csearchweb201603_25%2CppcSwitch_7&algo_expid=0208a662-cba1-4084-8c23-511d537f2113-0&algo_pvid=0208a662-cba1-4084-8c23-511d537f2113&priceBeautifyAB=0
+
+https://de.aliexpress.com/item/Original-Bluetooth-4-0-Waterproof-Touch-Screen-Fitness-Tracker-Health-Smart-Bracelet-Wristband-I5-IWOWN-Smart/32678775224.html?spm=a2g0x.search0104.3.56.17087a35gmSOzc&ws_ab_test=searchweb0_0,searchweb201602_2_10320_10152_10151_10065_10321_10344_10068_10342_10547_10343_10322_10340_10548_10341_10193_10696_10194_10084_10083_10618_10304_10307_10302_10059_308_100031_10319_10103_10624_10623_10622_10621_10620_10814_10815,searchweb201603_25,ppcSwitch_7&algo_expid=0208a662-cba1-4084-8c23-511d537f2113-10&algo_pvid=0208a662-cba1-4084-8c23-511d537f2113&priceBeautifyAB=0
+
 
 ## Special Thanks
 Special thanks to all the members of the smartwatch slack group ([@rogerclarkmelbourne](https://github.com/rogerclarkmelbourne), [@goran-mahovlic](https://github.com/goran-mahovlic), [@micooke](https://github.com/micooke), @olivier, @marvin, [@floe](https://github.com/floe), the [nRF51822 smart watch Gitter Lobby](https://gitter.im/nRF51822-Arduino-Mbed-smart-watch/Lobby), to @goran-mahovlic and @rogerclarkmelbourne for the KX022 accelerometer driver, to [@sandeepmistry](https://github.com/sandeepmistry) for the awesome ArduinoCore Nordic SDK wrapper and [Lampert](http://glampert.com/about/) for his awesome [light saber WebGL 3D model](http://glampert.com/2015/06-07/webgl-lightsaber/). [Roger Clark](http://www.rogerclark.net) in particular has done a lot of [cool stuff with Nordic activity trackers](http://www.rogerclark.net/new-nrf52832-based-smart-watch-available/), check out his work!
