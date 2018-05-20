@@ -18,7 +18,7 @@
 - the 4 little teeth on the very left directly connect to the USB connector on the housing
 
 ### more images
-- [this](/I5Plus-nrf51822-activity-tracker/raw_images/inside/DSC_2338.JPG) and [this](/I5Plus-nrf51822-activity-tracker/raw_images/inside/DSC_2345.JPG) are better to figure out the PCB layout
+- [this image](/I5Plus-nrf51822-activity-tracker/raw_images/inside/DSC_2338.JPG) and [this image](/I5Plus-nrf51822-activity-tracker/raw_images/inside/DSC_2345.JPG) are better to figure out the PCB layout
 ### front PCB:
 
 ![front view 2](/I5Plus-nrf51822-activity-tracker/Documentation/DSC_2318_cropped.JPG "PCB front view")
@@ -39,4 +39,4 @@ Special thanks to:
 
 
 
-######this page was created by [Tim](https://github.com/54696d21)
+this page was created by [Tim](https://github.com/54696d21), this same page is also avaible [here](https://github.com/54696d21/reverse_engineering_nrf5x-wearables/blob/master/I5Plus-nrf51822-activity-tracker/Documentation/components.md)
