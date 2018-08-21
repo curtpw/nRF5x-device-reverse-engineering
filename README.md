@@ -23,7 +23,7 @@ X9 Pro nRF52832 Based Color Smartwatch
 B20 nRF52832 Based ECG Smartwatch 
 ------------
 
-![B20_activity_tracker](misc/B20_commercial.jpg "B20 Smartwatch commercial image")
+![B20_activity_tracker](misc/B20_commercial.jpg "B20 Smartwatch commercial image") 
 
 ### Purchase Links
 * https://www.amazon.com/Bozlun-Pressure-Pedometer-Distance-Waterproof/dp/B074K9D97B
