@@ -6,7 +6,7 @@ Resources for reverse engineering generic [Nordic Semiconductor](https://www.nor
 NOTE: I will try to keep purchase links updated but one can only do so much. DuckDuckGo/Google search is your friend. I have worked with the X9 more than any other device and have placed X9 related files in the root of this repo. I am still in the process of hacking components for other listed devices, and you are of course welcome to contribute!
 
 
-X9 Pro nRF52832 Based Color Smartwatch 
+X9 Pro nRF52832 Based Color Activity Tracker
 ------------
 
 ![X9_activity_tracker](misc/X9_commercial.jpg "X9 Smartwatch commercial image")
@@ -20,7 +20,7 @@ X9 Pro nRF52832 Based Color Smartwatch
 * https://de.aliexpress.com/item/New-Original-X9-PRO-Smart-Watch-Sport-Heartrate-Blood-Pressure-Oxygen-Oximeter-Sport-Bracelet-Watch-intelligent/32823945075.html
 
 
-B20 nRF52832 Based ECG Smartwatch 
+B20 nRF52832 Based ECG Activity Tracker 
 ------------
 
 ![B20_activity_tracker](misc/B20_commercial.jpg "B20 Smartwatch commercial image") 
@@ -34,7 +34,7 @@ B20 nRF52832 Based ECG Smartwatch
 * http://www.dx.com/p/eastor-b20-ecg-heart-rate-blood-pressure-monitor-smart-band-red-479559#.W3x7iuhKiUk
 * https://www.aliexpress.com/item/Slimy-B20-ECG-Smart-Band-Heart-Rate-Blood-Pressure-Monitor-Bluetooth-Fitness-Bracelet-Smart-Wristband-Watch/32850321098.html
 
-CK12 nRF52832 Based ECG Smartwatch 
+CK12 nRF52832 Based ECG Activity Tracker
 ------------
 
 ![CK12_activity_tracker](misc/CK12_commercial.jpg "CK12 Smartwatch commercial image")
@@ -46,7 +46,7 @@ CK12 nRF52832 Based ECG Smartwatch
 * https://www.aliexpress.com/item/Teamyo-CK12-Graphene-ECG-Smart-Band-Oxygen-Pressure-Monitor-Sport-Smart-Wristband-Waterproof-Fitness-Tracker-Bluetooth/32862762634.html
 
 
-N68 nRF52832 Based Color Smartwatch 
+N68 nRF52832 Based Color Activity Tracker 
 ------------
 
 ![N68_activity_tracker](misc/N68_commercial.jpg "N68 Smartwatch commercial image")
@@ -58,7 +58,7 @@ N68 nRF52832 Based Color Smartwatch
 * https://www.ebay.com/itm/Lemfo-N68-Bluetooth-Waterproof-Activity-Tracker-Heart-Rate-Pedometer-Smart-Band/282777153434
 * https://www.amazon.com/Bracelet-Activity-Waterproof-Bluetooth-Wireless/dp/B078W28FYH/ref=sr_1_1
 
-ID107 Plus nRF52832 Based Smartwatch 
+ID107 Plus nRF52832 Based Activity Tracker
 ------------
 
 ![ID107Plus_activity_tracker](misc/ID107Plus_commercial.jpg "ID107 Plus Smartwatch commercial image")
@@ -70,7 +70,7 @@ ID107 Plus nRF52832 Based Smartwatch
 * https://www.ebay.com/itm/Fitness-Tracker-JELEGANT-ID107-Plus-HR-Smart-Bracelet-Activity-Tracker-Hear/292493668861
 
 
-M3 nRF51822 Based Mini Smartwatch 
+M3 nRF51822 Based Mini Activity Tracker
 ------------
 
 ![M3_activity_tracker](misc/M3_commercial.png "M3 Smartwatch commercial image")
@@ -82,7 +82,7 @@ M3 nRF51822 Based Mini Smartwatch
 * https://www.amazon.com/Aurorax-Fitness-Waterproof-Tracker-Monitor/dp/B0765RG26M/ref=sr_1_5
 
 
-ID107 nRF51822 Based Smartwatch 
+ID107 nRF51822 Based Activity Tracker
 ------------
 
 ![ID107_activity_tracker](misc/ID107_commercial.jpg "ID107 Smartwatch commercial image")
