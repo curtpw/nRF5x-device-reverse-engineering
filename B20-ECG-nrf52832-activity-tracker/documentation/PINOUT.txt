@@ -1,0 +1,33 @@
+B20 ECG Fitness Tracker
+
+P19: Button
+
+P3: Vibration Motor
+
+P5: SSD1306 OLED Display
+P6: SSD1306 OLED Display
+P7: SSD1306 OLED Display
+
+P11: GD25Q16C 16MB Gigadevice Flash Memory
+P12: GD25Q16C 16MB Gigadevice Flash Memory
+P13: GD25Q16C 16MB Gigadevice Flash Memory
+P14: GD25Q16C 16MB Gigadevice Flash Memory
+
+
+P15: ADS1292 CS
+P16: ADS1292 DIN
+P17: ADS1292 SCK
+P20: ADS1292 START
+P22: ADS1292 RESET
+P23: ADS1292 DOUT
+
+P25: HR I2C SDA
+P26: HR I2C SCL
+
+P28: BMA253 Accelerometer CS
+P29: BMA253 Accelerometer SDI
+P30: BMA253 Accelerometer SDO
+P31: BMA253 Accelerometer SCL
+
+
+
