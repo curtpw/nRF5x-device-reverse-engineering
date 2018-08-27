@@ -2,6 +2,10 @@
 ---------------------------------------------------------------------------------
 ADS1292 for Arduino Code
 
+This code is designed to send data to an open-source companion web app over Web Bluetooth
+This app is currently live and can be found here: https://curtpw.github.io/web-bluetooth-eeg-neural-network
+
+
 ADS1292 code Inspired by:
 https://github.com/ericherman/eeg-mouse
 http://www.mccauslandcenter.sc.edu/CRNL/ads1298
@@ -11,6 +15,9 @@ https://github.com/LeemanGeophysicalLLC/FIR_Filter_Arduino_Library
 
 FFT for ARM Cortex by Adafruit:
 https://github.com/adafruit/Adafruit_ZeroFFT
+
+MLP and LSTM Neural Networks from the SynapticJS framework
+https://github.com/cazala/synaptic
 
 nRF5x core and Bluetooth comms by Sandeep Mistry:
 https://github.com/sandeepmistry/arduino-nRF5
@@ -81,15 +88,18 @@ alpha and theta are highly correlated with attention
 /********************************************************************************************************/
 /************************ CONSTANTS / SYSTEM VAR ********************************************************/
 /********************************************************************************************************/
-bool    debug = false;                //turn serial on/off to get data or turn up sample rate
-bool    debug_time = false;           //turn loop component time debug on/off
-boolean debug_msg     = false;         //debug msg
+boolean debug_msg     = false;         //debug msg over USB with UART serial connection
 bool    IS_CONNECTED = false;
+
+//this switches the device from sending data over bluetooth to applying data to a stored standalone neural network
+//#define    SEND_DATA
+#define    NEURAL_NETWORK_DETECTION 
 
 
 /********************************************************************************************************/
 /************************ VARIABLES *********************************************************************/
 /********************************************************************************************************/
+#define VIBRATE_PIN 3    
 
 //the sample rate
 #define FS 80    
@@ -100,6 +110,13 @@ bool  timeCorrection = false;
 
 float deltaWave = 1, thetaWave = 1, alphaWave = 1, betaWave = 1, EMGWave = 1, deltaWave2 = 1, thetaWave2 = 1, alphaWave2 = 1, betaWave2 = 1, EMGWave2 = 1;
 
+//average over last ten seconds
+float longAverage[5] = {0,0,0,0,0};
+
+//variance from average over last 10 seconds proportional to the average (percentile value)
+float longVariance[5] = {0,0,0,0,0};
+
+//for short term averaging/smoothing over last ten samples
 float deltaWaveOld[10] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
 float thetaWaveOld[10] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
 float alphaWaveOld[10] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
@@ -107,14 +124,15 @@ float betaWaveOld[10] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
 float EMGWaveOld[10] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
 
 //data at point between BLE sends so we only have to send over BLE half as much
-float deltaWaveAncient[10];// = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100}; 
-float thetaWaveAncient[10];// = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100}; 
-float alphaWaveAncient[10];// = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100}; 
-float betaWaveAncient[10];// = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100}; 
-float EMGWaveAncient[10];// = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100}; 
+float deltaWaveAncient[10];
+float thetaWaveAncient[10];
+float alphaWaveAncient[10];
+float betaWaveAncient[10];
+float EMGWaveAncient[10];
 
 float transmitFloatArray[10]= {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
 
+//for BLE GATT notification
 unsigned char transmitCharArray[20] = {
     (uint8_t)(0), 
     (uint8_t)(0),
@@ -138,15 +156,26 @@ unsigned char transmitCharArray[20] = {
     (uint8_t)(0),                 //empty
 }; 
 
+//FIR filter declarations
 FIR<float, 25> fir_filter_deltawave; 
 FIR<float, 31> fir_filter_thetawave; 
 FIR<float, 25> fir_filter_alphawave; 
 FIR<float, 19> fir_filter_betawave; 
 FIR<float, 17> fir_filter_emgwave; 
 
+//correct time for a single ADS1292 sample loop
 float correctSampleTime;
+
+//ticks for events like bluetooth transmition and FIR filter applications that need to be spread out across ADS1292 samples
 int trackSamples = 0;
-bool samplesReadyFlag = false;
+
+//because MLP neural networks operate on a 'snap shot' of data, lengthy averaging is necessary to capture signals. Default is 10 samples
+//the counter keeps track of the # samples (10 by default) necassary for calculating long averages and variance
+int longAverageCounter = 10; //ten seconds, just like default in the web app
+
+//stored data for long average. uses a lot of memory so you may want to modify
+float longAverageData[480][5];
+
 
 //***Bluetooth variables
 unsigned long microsPerReading, microsPrevious;
@@ -498,6 +527,9 @@ enum SERIAL_API {
 };
 
 
+
+
+
 /********************************************************************************************************/
 /************************ DECLARATIONS ******************************************************************/
 /********************************************************************************************************/
@@ -516,6 +548,12 @@ BLECharCharacteristic    WriteOnlyArrayGattCharacteristic = BLECharCharacteristi
 BLECharacteristic        DataCharacteristic("a003", BLERead | BLENotify, 20);  //@param data - an Uint8Array.
 
 
+
+
+
+
+
+
 /********************************************************************************************************/
 /************************ BLUETOOTH BLE FUNCTIONS *******************************************************/
 /********************************************************************************************************/
@@ -525,7 +563,7 @@ void blePeripheralConnectHandler(BLECentral& central) {
   //CONNECTED
   IS_CONNECTED = true;
   
-  if(debug){
+  if(debug_msg){
     Serial.print(F("Connected event, central: "));
     Serial.println(central.address());
   }
@@ -538,7 +576,7 @@ void blePeripheralDisconnectHandler(BLECentral& central) {
     //NOT CONNECTED
     IS_CONNECTED = false;
   
-    if(debug){
+    if(debug_msg){
         Serial.print(F("Disconnected event, central: "));
         Serial.println(central.address());
     }
@@ -547,7 +585,7 @@ void blePeripheralDisconnectHandler(BLECentral& central) {
 
 void blePeripheralServicesDiscoveredHandler(BLECentral& central) {
   // central  services discovered event handler
-  if(debug){
+  if(debug_msg){
     Serial.print(F(" services discovered event, central: "));
     Serial.println(central.address());
   }
@@ -558,7 +596,7 @@ void blePeripheralServicesDiscoveredHandler(BLECentral& central) {
 
 void bleCharacteristicValueUpdatedHandle(BLECentral& central, BLECharacteristic& characteristic) {
   
-    if(debug){ Serial.print(F(" Begin bleCharacteristicValueUpdatedHandle: ")); }
+    if(debug_msg){ Serial.print(F(" Begin bleCharacteristicValueUpdatedHandle: ")); }
     
   const unsigned char* the_buffer = characteristic.value();
   unsigned char the_length = characteristic.valueLength();
@@ -572,22 +610,22 @@ void bleCharacteristicValueUpdatedHandle(BLECentral& central, BLECharacteristic&
 
   char *char_buf = const_cast<char*>(bleRawVal.c_str());
   command_value = (int)strtol(char_buf, NULL, 16);
-  if(debug) Serial.print("APP COMMAND: "); Serial.println( command_value );
+  if(debug_msg) Serial.print("APP COMMAND: "); Serial.println( command_value );
 
   BLEUtil::printBuffer(characteristic.value(), characteristic.valueLength());
- // if(debug) delay(1000);
+ // if(debug_msg) delay(1000);
   delay(5);
 }
 
 void switchCharacteristicWritten(BLECentral& central, BLECharacteristic& characteristic) {
   // central wrote new value to characteristic, update LED
-  if(debug) Serial.print(F("Characteristic event, written: "));
+  if(debug_msg) Serial.print(F("Characteristic event, written: "));
 
   if (ReadOnlyArrayGattCharacteristic.value()) {
-    if(debug) Serial.println(F("LED on"));
+    if(debug_msg) Serial.println(F("LED on"));
  //   digitalWrite(LED_PIN, HIGH);
   } else {
-    if(debug) Serial.println(F("LED off"));
+    if(debug_msg) Serial.println(F("LED off"));
  //   digitalWrite(LED_PIN, LOW);
   }
 }
@@ -630,8 +668,14 @@ void setupBluetooth(){
     // begin initialization
     blePeripheral.begin();
   
-    if(debug) Serial.println("BLE MOBILE APP PERIPHERAL");
+    if(debug_msg) Serial.println("BLE MOBILE APP PERIPHERAL");
 }
+
+
+
+
+
+
 
 
 /********************************************************************************************************/
@@ -903,7 +947,17 @@ void read_ADS1292_data(){
   digitalWrite(PIN_CS, HIGH);        
 }
 
-// main
+
+
+
+
+
+
+
+
+/********************************************************************************************************/
+/************************ SETUP  ************************************************************************/
+/********************************************************************************************************/
 
 void setup(){
   
@@ -913,6 +967,9 @@ void setup(){
   init_serial();
   delay(50); 
   if(debug_msg) Serial.println("Starting....");
+
+  //set vibration motor pin as GPIO output for haptic feedback
+  pinMode(VIBRATE_PIN, OUTPUT);
 
   // ------------------------------------------------------------
   // init ADS1292 bioimdedance sensor
@@ -972,6 +1029,18 @@ void setup(){
       
 }
 
+
+
+
+
+
+
+
+
+/********************************************************************************************************/
+/************************ PRIMARY LOOP  *****************************************************************/
+/********************************************************************************************************/
+
 void loop() {
     float startSampleTime = micros();
 
@@ -1025,7 +1094,7 @@ void loop() {
         betaWaveOld[k] = betaWaveOld[k+1];
         EMGWaveOld[k] = EMGWaveOld[k+1];
     }
-  
+
 
     /******************* Bluetooth BLE GAP/GATT Scanning **************/
     if( (trackSamples == 10 ) || (trackSamples == 35 ) || (trackSamples == 60 )/*&& IS_CONNECTED == false*/){
@@ -1065,11 +1134,30 @@ void loop() {
             timeCorrection = true;
         } else if( (micros() - startSampleTime) < correctSampleTime){ delayMicroseconds( (correctSampleTime - (micros() - startSampleTime) ) ); } //regulate sample rate
     }
+ 
+
+    /******************* Neural Network Detection OR send over Bluetooth **********************/
+   else if( ( (trackSamples == 26 ) || (trackSamples == 52 ) || (trackSamples == 80 )) ){
     
-    /******************* Bluetooth BLE GAP/GATT Sending ***************/
-    else if( ( (trackSamples == 26 ) || (trackSamples == 52 ) || (trackSamples == 80 )) && IS_CONNECTED == true){
-        sendBluetooth();  
+
+    #ifdef defined(NEURAL_NETWORK_DETECTION)
+    
+          //if we are applying averages or variance to neural network input nodes
+          getAverageVariance();
+          
+           /************************* DETECTION *********************/
+           //my neural network is trained with variance over 10 samples in proportion to average over 10 samples (ration of variation from average to average)
+           //why did I choose this? Because it worked. I think because using proportions removes drift and looking at data over a long period of time works for 'snap shot' style MLP neural networks
+           float detectionResult = neural_network(longVariance);
+                
+    #elif defined(SEND_DATA)
         
+        if (IS_CONNECTED == true){
+           sendBluetooth();  
+        }
+        
+    #endif
+       
         //track how much we run over allowed sample time
         bluetoothTimeOverflow = (micros() - startSampleTime) - correctSampleTime; 
         
@@ -1088,25 +1176,36 @@ void loop() {
     } else {
         if( (micros() - startSampleTime) < correctSampleTime){ delayMicroseconds( (correctSampleTime - (micros() - startSampleTime) ) ); } //regulate sample rate
     }
-
-
  
  Serial.print("sample time: "); Serial.println(micros() - startSampleTime);
 } //end infinate loop
 
 
+
+
+
+
+
 /********************************************************************************************************/
 /************************ PRIMARY LOOP FUNCTIONS ********************************************************/
 /********************************************************************************************************/
+
+/************************ SEND DATA OVER BLE GATT NOTIFICATION ************************/
 void sendBluetooth(){
     //send data over bluetooth BLE GATT notification characteristic
     DataCharacteristic.setValue(transmitCharArray,20);
+    if(debug_msg) Serial.println("BLE GATT notification set");
     //time to send
     // delay(5);
 }
 
+
+
+
+/************************ PROCESS DATA FOR TRANSMITION, MACHINE LEARNING OR STORAGE ***/
 void processData(){
 
+/******* GET TWO SAMPLE TOGETHER SO WE CAN SEND AT SAME TIME ********/
 if(debug_msg){
     Serial.print("Old delta, ancient delta:\t");
     for(int q = 0; q < 10; q++){  Serial.print(deltaWaveOld[q], 6); Serial.print("\t"); }  
@@ -1118,7 +1217,7 @@ if(debug_msg){
 
     //front load inter-trasnmition sample
     deltaWave2 = deltaWaveAncient[9]; thetaWave2 = thetaWaveAncient[9]; alphaWave2 = alphaWaveAncient[9]; betaWave2 = betaWaveAncient[9]; EMGWave2 = EMGWaveAncient[9];
-    
+
     //get average based on last 6 samples
     for(int j = 0; j < 10; j++){
         transmitFloatArray[0] = deltaWave + deltaWaveOld[j];
@@ -1159,15 +1258,14 @@ if(debug_msg){
     if(debug_msg) for(int q = 0; q < 10; q++){  Serial.print(transmitFloatArray[q], 6); Serial.print("\t"); } Serial.println(" ");
     
     //impedence signals have a big spread so we will take log before sending then inverse log in our target application
-    //float   deltaWave = min(max(1e-3,log10( deltaWave + offset )),10)/10;  
-  
+    //float   deltaWave = min(max(1e-3,log10( deltaWave + offset )),10)/10;   
 
     /******************* Bluetooth BLE Data Transmittion **********/
     BLECentral central = blePeripheral.central();
 
     if(central){ // if a central is connected to peripheral
 
-        //we will send six significant digits from each signal log value  example: log10(565629) --> 5.75253166 --> 0.575253166 --> ["57"],["52"],["53"] 
+        //we will send four significant digits from each signal log value  example:  0.575253166 --> ["57"],["52"]
        // const unsigned char transmitCharArray[20] = {
        const unsigned char tempTransmitCharArray[20] = {
             (uint8_t)( int(transmitFloatArray[0] * 100) ),  
@@ -1196,5 +1294,162 @@ if(debug_msg){
     }
 }
 
+/************************ GET AVERAGES AND VARIANCE OVER TEN SAMPLES *******************/
+void getAverageVariance(){
+
+ /******************* STORE DATA FOR LONG AVERAGE *************/
+    //first sample
+    for (int r=0; r < (longAverageCounter - 1); r++){
+      for (int w=0; w < 5; w++){
+        longAverageData[r][w] = longAverageData[r + 1][w];
+      }
+    }
+    //longAverageData[longAverageCounter - 1] = { transmitFloatArray[0], transmitFloatArray[1], transmitFloatArray[2], transmitFloatArray[3], transmitFloatArray[4] };
+    for (int p=0; p < 5; p++){ longAverageData[longAverageCounter - 1][p] = transmitFloatArray[p]; }
+
+
+    //second sample
+    for (int r=0; r < (longAverageCounter - 1); r++){
+      for (int w=0; w < 5; w++){
+        longAverageData[r][w] = longAverageData[r + 1][w];
+      }
+    }
+    //longAverageData[longAverageCounter - 1] = { transmitFloatArray[5], transmitFloatArray[6], transmitFloatArray[7], transmitFloatArray[8], transmitFloatArray[9] };
+    for (int p=0; p < 5; p++){ longAverageData[longAverageCounter - 1][p] = transmitFloatArray[p + 5]; }
+
+
+    /******************* CALCULATE LONG AVERAGE *******************/
+    float longAvTotal[5] = {0,0,0,0,0};
+    
+    for (int f=0; f < longAverageCounter; f++){
+      for (int v=0; v < 5; v++){
+        longAvTotal[v] = longAvTotal[v] + longAverageData[f][v];
+      }
+    }
+    for (int g=0; g < 5; g++){ longAverage[g] = longAvTotal[g] / longAverageCounter; } 
+
+    if(debug_msg) Serial.print("Long av delta, theta, alpha, beta, emg:  \t"); 
+    if(debug_msg) for(int q = 0; q < 5; q++){  Serial.print(longAverage[q], 6); Serial.print("\t"); } Serial.println(" ");
+
+
+    /******************* CALCULATE LONG VARIANCE ******************/
+    float longVarianceTotal[5] = {0,0,0,0,0};
+
+    for (int f=0; f < longAverageCounter; f++){
+      for (int v=0; v < 5; v++){
+        longVarianceTotal[v] = longVarianceTotal[v] + abs(longAverage[v] - longAverageData[f][v]);
+      }
+    }
+    for (int g=0; g < 5; g++){ longVariance[g] = longVarianceTotal[g] / longAverageCounter; } 
+
+    if(debug_msg) Serial.print("Variance delta, theta, alpha, beta, emg:  \t"); 
+    if(debug_msg) for(int q = 0; q < 5; q++){  Serial.print(longVariance[q], 6); Serial.print("\t"); } Serial.println(" ");
+}
+
+
+
+
+
+/********************************************************************************************************/
+/************************ NEURAL NETWORK WEIGHTS AND ACTIVATION FUNCTION ********************************/
+/********************************************************************************************************/
+
+
+//template for 5:5:1 MLP neural network architecture (5 input nodes, 5 hidden layer nodes and one output node for binary detection)
+float neural_network(float input[]){
+  float F[] = {0,0,0};
+F[3] = 0.005611505153023271;
+F[5] = 0.02462880729278744;
+F[7] = 0.017220881643222878;
+F[9] = 0.16484020558150428;
+F[11] = 0.09971474346449927;
+F[13] = 0.6657557858588754;
+F[0] = 0.7900795325028657;
+F[1] = 0.6890510095363191;
+F[2] = 0.9656821454074651;
+F[4] = -0.5094175996818463;
+F[6] = -0.7955988500147849;
+F[8] = -1.011390968242838;
+F[10] = 3.487698693071496;
+F[12] = -8.139957872209763;
+F[14] = 0;
+F[58] = -9.343698917657342;
+F[23] = 0.5590290139229691;
+F[15] = 0.22473053149922523;
+F[16] = 0.23722229299533432;
+F[17] = 0.2024795923463572;
+F[18] = 0.008983593720513952;
+F[19] = 0.03579338693619831;
+F[20] = 0.13513778395894369;
+F[21] = -0.4098901100737798;
+F[22] = 0.9933327361954346;
+F[24] = 0;
+F[59] = 0.967583381259242;
+F[33] = 0.47474589157936753;
+F[25] = -0.13262515335025163;
+F[26] = -0.10110246573925213;
+F[27] = -0.19812262142280815;
+F[28] = 0.06338108171160667;
+F[29] = 0.16960025549004606;
+F[30] = 0.304394380193789;
+F[31] = -0.9988998732975323;
+F[32] = 2.526249905791147;
+F[34] = 0;
+F[60] = 2.6544240376683397;
+F[43] = 0.580487435684317;
+F[35] = 0.32860628225423694;
+F[36] = 0.32477468079737243;
+F[37] = 0.3054803768303582;
+F[38] = -0.05624229525438401;
+F[39] = -0.022964995881039937;
+F[40] = 0.00037090540809566017;
+F[41] = 0.29488411250592617;
+F[42] = -0.28520994692995716;
+F[44] = 0;
+F[61] = -0.48194467310184524;
+F[53] = 0.37201479936671034;
+F[45] = -0.5997379363600315;
+F[46] = -0.523582963594302;
+F[47] = -0.7555577098789288;
+F[48] = 0.3743578867501711;
+F[49] = 0.5213170708613452;
+F[50] = 0.7720565310098784;
+F[51] = -2.488903302792247;
+F[52] = 6.157669708876412;
+F[54] = 0;
+F[62] = 6.74908979750895;
+F[63] = 0.06148835339937835;
+F[55] = -3.075011764000341;
+F[56] = -2.7254474844943206;
+F[57] = -0.536908418144398;
+F[64] = 0;
+
+  F[3] = input[0];
+  F[5] = input[1];
+  F[7] = input[2];
+  F[9] = input[3];
+  F[11] = input[4];
+  
+  F[0] = F[1];F[1] = F[2];F[1] += F[3] * F[4];F[1] += F[5] * F[6];F[1] += F[7] * F[8];F[1] += F[9] * F[10];F[1] += F[11] * F[12];F[13] = (1 / (1 + exp(-F[1])));F[14] = F[13] * (1 - F[13]);
+  F[15] = F[16];F[16] = F[17];F[16] += F[3] * F[18];F[16] += F[5] * F[19];F[16] += F[7] * F[20];F[16] += F[9] * F[21];F[16] += F[11] * F[22];F[23] = (1 / (1 + exp(-F[16])));F[24] = F[23] * (1 - F[23]);
+  F[25] = F[26];F[26] = F[27];F[26] += F[3] * F[28];F[26] += F[5] * F[29];F[26] += F[7] * F[30];F[26] += F[9] * F[31];F[26] += F[11] * F[32];F[33] = (1 / (1 + exp(-F[26])));F[34] = F[33] * (1 - F[33]);
+  F[35] = F[36];F[36] = F[37];F[36] += F[3] * F[38];F[36] += F[5] * F[39];F[36] += F[7] * F[40];F[36] += F[9] * F[41];F[36] += F[11] * F[42];F[43] = (1 / (1 + exp(-F[36])));F[44] = F[43] * (1 - F[43]);
+  F[45] = F[46];F[46] = F[47];F[46] += F[3] * F[48];F[46] += F[5] * F[49];F[46] += F[7] * F[50];F[46] += F[9] * F[51];F[46] += F[11] * F[52];F[53] = (1 / (1 + exp(-F[46])));F[54] = F[53] * (1 - F[53]);
+  F[55] = F[56];F[56] = F[57];F[56] += F[13] * F[58];F[56] += F[23] * F[59];F[56] += F[33] * F[60];F[56] += F[43] * F[61];F[56] += F[53] * F[62];F[63] = (1 / (1 + exp(-F[56])));F[64] = F[63] * (1 - F[63]);
+  
+  float output = F[63];
+  
+  if(debug_msg) Serial.print("NEURAL NETWORK OUTPUT:  \t"); 
+  if(debug_msg) Serial.println(output); 
+
+  float arbitraryDetectionCutoff = 0.9;
+  if(output > arbitraryDetectionCutoff){
+    digitalWrite(VIBRATE_PIN, HIGH);       // sets the vibration motor on
+    delay(1000);                           // waits a second
+    digitalWrite(VIBRATE_PIN, LOW);
+  }
+  
+  return output;
+}
 
 
