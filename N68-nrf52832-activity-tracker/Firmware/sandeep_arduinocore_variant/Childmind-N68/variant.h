@@ -42,7 +42,7 @@ extern "C"
 #define NUM_ANALOG_OUTPUTS   (0u)
 
 // LEDs
-#define PIN_LED              (23) //vibration motor
+#define PIN_LED              (19) //nc
 #define LED_BUILTIN          PIN_LED
 
 /*
